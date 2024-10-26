@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Absensi Otomatis dengan Deteksi Gerakan</title>
+    <title>Absensi Otomatis dengan Gerakan dan Foto</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -14,24 +14,69 @@
         h1 {
             color: #4CAF50;
         }
-        p {
-            font-size: 18px;
+        video, canvas, img {
+            display: block;
+            margin: 10px auto;
+            max-width: 320px;
+            width: 100%;
+            border: 1px solid #ddd;
+            border-radius: 5px;
         }
         #status {
             font-size: 24px;
             font-weight: bold;
             color: #555;
         }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
     </style>
 </head>
 <body>
 
-    <h1>Absensi Otomatis dengan Gerakan Atas-Bawah</h1>
-    <p>Goyangkan perangkat ke atas dan ke bawah untuk melakukan absensi.</p>
+    <h1>Absensi Otomatis dengan Gerakan Atas-Bawah dan Foto</h1>
+    <p>Goyangkan perangkat ke atas dan ke bawah untuk mengambil foto dan melakukan absensi otomatis.</p>
+    <video id="video" autoplay></video>
+    <canvas id="canvas" width="320" height="240" style="display:none;"></canvas>
     <div id="status">Menunggu gerakan...</div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>Nama</th>
+                <th>Foto</th>
+                <th>Waktu</th>
+            </tr>
+        </thead>
+        <tbody id="attendanceList"></tbody>
+    </table>
 
     <script>
         let absensiDone = false;
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const context = canvas.getContext('2d');
+
+        // Mengakses kamera
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(function(stream) {
+                video.srcObject = stream;
+            })
+            .catch(function(err) {
+                console.error("Error accessing the camera: " + err);
+            });
 
         // Mendeteksi gerakan dengan akselerometer
         if ('Accelerometer' in window) {
@@ -49,10 +94,9 @@
                     }
 
                     if (movementCount >= 3) { // Jika terdeteksi 3 kali goyangan
-                        document.getElementById('status').innerText = "Absensi Berhasil!";
+                        document.getElementById('status').innerText = "Mengambil Foto...";
+                        takePicture();
                         absensiDone = true;
-                        // Simpan absensi (Anda bisa mengganti dengan ajax untuk menyimpan ke server)
-                        console.log("Absensi dilakukan!");
                     }
 
                     lastAccelerationZ = currentZ;
@@ -62,6 +106,24 @@
             accelerometer.start();
         } else {
             document.getElementById('status').innerText = "Perangkat ini tidak mendukung sensor akselerometer.";
+        }
+
+        // Fungsi untuk mengambil foto
+        function takePicture() {
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const imgData = canvas.toDataURL('image/png');
+            const now = new Date().toLocaleString();
+
+            // Tambahkan data ke tabel absensi
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>Nama Pengguna</td>
+                <td><img src="${imgData}" alt="Foto Absen"></td>
+                <td>${now}</td>
+            `;
+            document.getElementById('attendanceList').appendChild(row);
+
+            document.getElementById('status').innerText = "Absensi Berhasil!";
         }
     </script>
 
