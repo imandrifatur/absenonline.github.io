@@ -1,122 +1,141 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Tracker untuk 3 Perangkat</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            margin: 0;
-            padding: 20px;
-        }
-        header {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        #map {
-            height: 400px;
-            width: 100%;
-            margin-top: 20px;
-        }
-        #locationInfo {
-            background: white;
-            padding: 10px;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-            text-align: center;
-            margin-top: 20px;
-            font-size: 16px;
-        }
-        @media (max-width: 600px) {
-            #map {
-                height: 300px;
-            }
-        }
-    </style>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Absen Online dengan Verifikasi Wajah & Lokasi</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f4;
+      margin: 0;
+      padding: 20px;
+      text-align: center;
+    }
+    #camera, #snapshot {
+      margin-top: 20px;
+      border: 2px solid #ddd;
+      border-radius: 10px;
+      width: 100%;
+      max-width: 400px;
+    }
+    #locationInfo {
+      margin-top: 20px;
+      padding: 10px;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    }
+    #status {
+      color: green;
+      font-weight: bold;
+    }
+    button {
+      padding: 10px 20px;
+      margin-top: 20px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    #map {
+      height: 400px;
+      width: 100%;
+      margin-top: 20px;
+    }
+    @media (max-width: 600px) {
+      #map {
+        height: 300px;
+      }
+    }
+  </style>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
 </head>
 <body>
 
-    <header>
-        <h1>Admin Tracker untuk 3 Perangkat</h1>
-        <p>Melacak posisi tiga perangkat yang berbeda dan menampilkannya di peta secara real-time.</p>
-    </header>
+  <h1>Absen Online dengan Verifikasi Wajah & Lokasi</h1>
+  <p>Ambil gambar untuk verifikasi wajah dan deteksi lokasi secara real-time.</p>
 
-    <div id="locationInfo">Mendapatkan lokasi dari tiga perangkat...</div>
-    <div id="map"></div>
+  <!-- Video kamera untuk mengambil gambar -->
+  <video id="camera" autoplay></video>
+  <canvas id="snapshot" style="display:none;"></canvas>
 
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-    <script>
-        // Inisialisasi peta dengan Leaflet.js
-        var map = L.map('map').setView([0, 0], 13);
+  <!-- Tombol untuk mengambil gambar dan absensi -->
+  <button onclick="takeSnapshot()">Ambil Gambar & Absen</button>
 
-        // Menambahkan layer peta (menggunakan OpenStreetMap)
+  <!-- Menampilkan informasi lokasi -->
+  <div id="locationInfo">Menunggu lokasi...</div>
+
+  <!-- Peta untuk menampilkan posisi pengguna -->
+  <div id="map"></div>
+
+  <div id="status"></div>
+
+  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+  <script>
+    // Membuka kamera perangkat
+    const video = document.getElementById('camera');
+    const canvas = document.getElementById('snapshot');
+    const context = canvas.getContext('2d');
+
+    navigator.mediaDevices.getUserMedia({ video: true })
+      .then((stream) => {
+        video.srcObject = stream;
+      })
+      .catch((error) => {
+        console.error('Error accessing camera:', error);
+      });
+
+    // Fungsi untuk mengambil snapshot dari video
+    function takeSnapshot() {
+      // Mengambil snapshot dari video
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+      // Placeholder untuk face recognition (disini hanya snapshot)
+      alert("Gambar diambil untuk verifikasi wajah.");
+
+      // Melakukan absensi
+      if (currentPosition) {
+        document.getElementById('status').textContent = 'Absensi berhasil!';
+        document.getElementById('status').style.color = 'green';
+      } else {
+        document.getElementById('status').textContent = 'Gagal mengambil lokasi!';
+        document.getElementById('status').style.color = 'red';
+      }
+    }
+
+    // Geolocation untuk mendapatkan lokasi pengguna
+    let currentPosition;
+    if (navigator.geolocation) {
+      navigator.geolocation.watchPosition(function(position) {
+        currentPosition = position;
+        const lat = position.coords.latitude;
+        const lon = position.coords.longitude;
+        
+        // Update lokasi di informasi lokasi
+        document.getElementById('locationInfo').innerHTML = `Latitude: ${lat}, Longitude: ${lon}`;
+
+        // Memperbarui peta dengan lokasi pengguna
+        var map = L.map('map').setView([lat, lon], 13);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 18,
+          maxZoom: 18,
         }).addTo(map);
-
-        // Variabel untuk marker tiga perangkat
-        var marker1, marker2, marker3;
-
-        // Fungsi untuk memperbarui posisi perangkat
-        function updateDeviceLocation(deviceNumber, lat, lon) {
-            // Cek perangkat mana yang akan diperbarui dan buat atau perbarui markernya
-            if (deviceNumber === 1) {
-                if (!marker1) {
-                    marker1 = L.marker([lat, lon]).addTo(map).bindPopup("Perangkat 1");
-                } else {
-                    marker1.setLatLng([lat, lon]);
-                }
-            } else if (deviceNumber === 2) {
-                if (!marker2) {
-                    marker2 = L.marker([lat, lon], { icon: L.icon({ iconUrl: 'https://leafletjs.com/examples/custom-icons/leaf-green.png', iconSize: [38, 95], popupAnchor: [0, -15] }) }).addTo(map).bindPopup("Perangkat 2");
-                } else {
-                    marker2.setLatLng([lat, lon]);
-                }
-            } else if (deviceNumber === 3) {
-                if (!marker3) {
-                    marker3 = L.marker([lat, lon], { icon: L.icon({ iconUrl: 'https://leafletjs.com/examples/custom-icons/leaf-red.png', iconSize: [38, 95], popupAnchor: [0, -15] }) }).addTo(map).bindPopup("Perangkat 3");
-                } else {
-                    marker3.setLatLng([lat, lon]);
-                }
-            }
-        }
-
-        // Simulasi lokasi tiga perangkat berbeda
-        function trackDevices() {
-            // Data posisi simulasi (dalam aplikasi nyata, ambil data dari server)
-            var deviceLocations = [
-                { deviceNumber: 1, lat: -6.200000, lon: 106.816666 },  // Jakarta
-                { deviceNumber: 2, lat: -7.250445, lon: 112.768845 },  // Surabaya
-                { deviceNumber: 3, lat: -6.914744, lon: 107.609810 }   // Bandung
-            ];
-
-            // Memperbarui lokasi perangkat di peta
-            deviceLocations.forEach(function (device) {
-                updateDeviceLocation(device.deviceNumber, device.lat, device.lon);
-            });
-
-            // Menampilkan posisi perangkat di UI
-            document.getElementById('locationInfo').innerHTML = `
-                <strong>Posisi Perangkat:</strong><br>
-                Perangkat 1: Latitude: ${deviceLocations[0].lat}, Longitude: ${deviceLocations[0].lon}<br>
-                Perangkat 2: Latitude: ${deviceLocations[1].lat}, Longitude: ${deviceLocations[1].lon}<br>
-                Perangkat 3: Latitude: ${deviceLocations[2].lat}, Longitude: ${deviceLocations[2].lon}
-            `;
-            
-            // Zoom ke lokasi tengah antar perangkat
-            map.setView([deviceLocations[0].lat, deviceLocations[0].lon], 5);
-        }
-
-        // Panggil fungsi untuk melacak tiga perangkat
-        trackDevices();
-
-        // Simulasi pembaruan posisi secara berkala (misalnya setiap 10 detik)
-        setInterval(trackDevices, 10000);
-
-    </script>
-
+        L.marker([lat, lon]).addTo(map)
+          .bindPopup('Lokasi Anda Saat Ini')
+          .openPopup();
+      }, function(error) {
+        document.getElementById('locationInfo').textContent = 'Gagal mendapatkan lokasi!';
+        console.error('Error getting location:', error);
+      });
+    } else {
+      document.getElementById('locationInfo').textContent = 'Geolocation tidak didukung oleh browser ini.';
+    }
+  </script>
 </body>
 </html>
