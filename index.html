@@ -1,193 +1,115 @@
 <!DOCTYPE html>
 <html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aplikasi Absen dengan Foto dan Lokasi</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Live Location dengan Peta (GPS)</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            margin: 0;
-            padding: 20px;
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f4f4f4;
+        margin: 0;
+        padding: 20px;
+      }
+      header {
+        text-align: center;
+        margin-bottom: 20px;
+      }
+      #map {
+        height: 400px;
+        width: 100%;
+        margin-top: 20px;
+      }
+      #locationInfo {
+        background: white;
+        padding: 10px;
+        border-radius: 8px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        margin-top: 20px;
+        font-size: 16px;
+      }
+      @media (max-width: 600px) {
+        #map {
+          height: 300px;
         }
-        header {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        form {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
-        }
-        input[type="text"],
-        input[type="submit"] {
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 16px;
-            width: 100%;
-        }
-        input[type="submit"] {
-            background-color: #28a745;
-            color: white;
-            cursor: pointer;
-        }
-        input[type="submit"]:hover {
-            background-color: #218838;
-        }
-        video {
-            width: 100%;
-            max-width: 320px;
-            border-radius: 5px;
-            margin: auto;
-            display: block;
-            margin-top: 10px;
-            border: 1px solid #ddd;
-        }
-        canvas {
-            display: none; /* Sembunyikan canvas */
-        }
-        img {
-            max-width: 100%;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            margin-top: 10px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        table, th, td {
-            border: 1px solid #ddd;
-        }
-        th, td {
-            padding: 10px;
-            text-align: left;
-        }
-        th {
-            background-color: #f2f2f2;
-        }
-        @media (max-width: 600px) {
-            form {
-                padding: 15px;
-            }
-            input[type="submit"] {
-                padding: 12px;
-            }
-        }
+      }
     </style>
-</head>
-<body>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+  </head>
+  <body>
     <header>
-        <h1>Aplikasi Absen dengan Foto dan Lokasi</h1>
+      <h1>Live Location dengan Peta (GPS)</h1>
+      <p>
+        Melacak posisi Anda secara langsung menggunakan GPS dan menampilkannya
+        di peta.
+      </p>
     </header>
-    <form id="attendanceForm">
-        <input type="text" id="name" placeholder="Nama" required>
-        <video id="video" autoplay></video>
-        <button type="button" id="snap">Ambil Foto</button>
-        <canvas id="canvas" width="320" height="240"></canvas>
-        <input type="text" id="location" placeholder="Lokasi" readonly required>
-        <input type="submit" value="Absen">
-    </form>
-    <table>
-        <thead>
-            <tr>
-                <th>Nama</th>
-                <th>Foto</th>
-                <th>Lokasi</th>
-            </tr>
-        </thead>
-        <tbody id="attendanceList"></tbody>
-    </table>
 
+    <div id="locationInfo">Mendapatkan lokasi Anda...</div>
+    <div id="map"></div>
+
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script>
-        // Mendapatkan akses ke kamera
-        const video = document.getElementById('video');
-        const canvas = document.getElementById('canvas');
-        const context = canvas.getContext('2d');
+      // Inisialisasi peta dengan Leaflet.js
+      var map = L.map("map").setView([0, 0], 13); // Awal peta dengan posisi [0, 0]
 
-        navigator.mediaDevices.getUserMedia({ video: true })
-            .then(function(stream) {
-                video.srcObject = stream;
-            })
-            .catch(function(err) {
-                console.error("Error accessing the camera: " + err);
-            });
+      // Menambahkan layer peta (gunakan OpenStreetMap)
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 18,
+      }).addTo(map);
 
-        // Mengambil foto
-        document.getElementById('snap').addEventListener('click', function() {
-            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+      // Menambahkan marker awal
+      var marker = L.marker([0, 0]).addTo(map);
+
+      // Fungsi untuk memperbarui lokasi secara langsung
+      function updateLocation(position) {
+        var lat = position.coords.latitude;
+        var lon = position.coords.longitude;
+        var accuracy = position.coords.accuracy;
+
+        // Menampilkan posisi dalam bentuk teks
+        document.getElementById(
+          "locationInfo"
+        ).innerHTML = `Posisi Anda: <br> Latitude: ${lat.toFixed(
+          6
+        )}, Longitude: ${lon.toFixed(6)} <br> Akurasi: ${accuracy} meter`;
+
+        // Memperbarui posisi marker di peta
+        marker.setLatLng([lat, lon]).bindPopup("Anda di sini!").openPopup();
+
+        // Memperbesar peta ke posisi saat ini
+        map.setView([lat, lon], 13);
+      }
+
+      // Menangani kesalahan geolokasi
+      function showError(error) {
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            alert("Pengguna menolak permintaan geolokasi.");
+            break;
+          case error.POSITION_UNAVAILABLE:
+            alert("Informasi lokasi tidak tersedia.");
+            break;
+          case error.TIMEOUT:
+            alert("Permintaan untuk mendapatkan lokasi pengguna time out.");
+            break;
+          case error.UNKNOWN_ERROR:
+            alert("Terjadi kesalahan yang tidak diketahui.");
+            break;
+        }
+      }
+
+      // Mendapatkan live location secara terus-menerus
+      if (navigator.geolocation) {
+        navigator.geolocation.watchPosition(updateLocation, showError, {
+          enableHighAccuracy: true, // Aktifkan akurasi tinggi (GPS)
+          timeout: 10000, // Timeout setelah 10 detik
+          maximumAge: 0, // Jangan menggunakan cache, selalu ambil data baru
         });
-
-        // Mengambil lokasi saat form dikirim
-        document.getElementById('attendanceForm').addEventListener('submit', function(event) {
-            event.preventDefault(); // Mencegah form dari pengiriman default
-
-            const name = document.getElementById('name').value;
-            const imgData = canvas.toDataURL('image/png');
-            const location = document.getElementById('location').value;
-
-            // Menambahkan data ke tabel
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${name}</td>
-                <td><img src="${imgData}" alt="Foto Absen"></td>
-                <td>${location}</td>
-            `;
-            document.getElementById('attendanceList').appendChild(row);
-
-            // Mengosongkan form setelah pengisian
-            document.getElementById('attendanceForm').reset();
-            context.clearRect(0, 0, canvas.width, canvas.height);
-            getLocation(); // Memperbarui lokasi setiap kali absen
-        });
-
-        // Mendapatkan lokasi
-        function getLocation() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(showPosition, showError);
-            } else {
-                alert("Geolocation tidak didukung oleh browser ini.");
-            }
-        }
-
-        function showPosition(position) {
-            const lat = position.coords.latitude;
-            const lon = position.coords.longitude;
-            document.getElementById('location').value = `Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}`;
-        }
-
-        function showError(error) {
-            let errorMessage = '';
-            switch(error.code) {
-                case error.PERMISSION_DENIED:
-                    errorMessage = "Pengguna menolak permintaan geolokasi.";
-                    break;
-                case error.POSITION_UNAVAILABLE:
-                    errorMessage = "Lokasi tidak tersedia.";
-                    break;
-                case error.TIMEOUT:
-                    errorMessage = "Permintaan geolokasi waktu habis.";
-                    break;
-                case error.UNKNOWN_ERROR:
-                    errorMessage = "Kesalahan tidak dikenal.";
-                    break;
-            }
-            alert(errorMessage);
-            document.getElementById('location').value = "Lokasi tidak ditemukan";
-        }
-
-        // Memanggil fungsi getLocation saat halaman dimuat
-        window.onload = function() {
-            getLocation();
-        };
+      } else {
+        alert("Geolocation tidak didukung oleh browser ini.");
+      }
     </script>
-</body>
+  </body>
 </html>
