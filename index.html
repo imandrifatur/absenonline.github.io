@@ -136,7 +136,6 @@
       let absensiData = document.getElementById("absensiData");
       let statusText = document.getElementById("status");
       let captureBtn = document.getElementById("captureBtn");
-      const apiKey = "YOUR_API_KEY"; // Ganti dengan API Key Anda
 
       // Akses Kamera
       async function setupCamera() {
@@ -154,12 +153,12 @@
 
         // Ambil Lokasi Pengguna
         if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition(async (position) => {
+          navigator.geolocation.getCurrentPosition((position) => {
             const latitude = position.coords.latitude;
             const longitude = position.coords.longitude;
 
-            // Dapatkan Nama Lokasi dari Latitude dan Longitude
-            const tempatAbsensi = await getLocationName(latitude, longitude);
+            // Dapatkan Nama Lokasi dari Latitude dan Longitude (Menggunakan API Reverse Geocoding)
+            const tempatAbsensi = prompt("Masukkan nama tempat absensi:");
 
             // Simpan Foto, Lokasi, dan Nama Tempat di LocalStorage
             simpanKeLocalStorage(imgData, latitude, longitude, tempatAbsensi);
@@ -174,19 +173,6 @@
         } else {
           statusText.innerText = "Geolokasi tidak didukung di browser ini.";
           statusText.style.color = "red";
-        }
-      }
-
-      // Dapatkan Nama Lokasi dari API
-      async function getLocationName(latitude, longitude) {
-        const response = await fetch(
-          `https://api.opencagedata.com/geocode/v1/json?q=${latitude}+${longitude}&key=${apiKey}`
-        );
-        const data = await response.json();
-        if (data.results.length > 0) {
-          return data.results[0].formatted_address; // Mengembalikan nama lokasi
-        } else {
-          return "Lokasi tidak ditemukan";
         }
       }
 
@@ -213,17 +199,17 @@
         absensiData.innerHTML = ""; // Bersihkan data sebelumnya
         let dataAbsensi = JSON.parse(localStorage.getItem("absensi")) || [];
 
-        dataAbsensi.forEach((item) => {
+        dataAbsensi.forEach((item, index) => {
           let div = document.createElement("div");
           div.classList.add("absensi-item");
-          div.innerHTML = `
+          div.innerHTML = 
                     <p><strong>Tempat:</strong> ${item.tempat}</p>
                     <p><strong>Waktu:</strong> ${item.waktu}</p>
                     <p><strong>Latitude:</strong> ${item.latitude}</p>
                     <p><strong>Longitude:</strong> ${item.longitude}</p>
                     <img src="${item.image}" alt="Foto Absensi">
                     <a href="https://www.google.com/maps?q=${item.latitude},${item.longitude}" target="_blank">Lihat di Google Maps</a>
-                `;
+                ;
           absensiData.appendChild(div);
         });
       }
