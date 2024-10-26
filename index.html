@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Absensi Otomatis dengan Gerakan dan Foto</title>
+    <title>Absensi Otomatis dengan Verifikasi Wajah</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -11,120 +11,91 @@
             margin: 0;
             padding: 20px;
         }
-        h1 {
-            color: #4CAF50;
-        }
-        video, canvas, img {
+        video, canvas {
             display: block;
             margin: 10px auto;
-            max-width: 320px;
-            width: 100%;
+            width: 320px;
+            height: 240px;
             border: 1px solid #ddd;
             border-radius: 5px;
         }
         #status {
-            font-size: 24px;
+            font-size: 18px;
             font-weight: bold;
-            color: #555;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        table, th, td {
-            border: 1px solid #ddd;
-        }
-        th, td {
-            padding: 10px;
-            text-align: left;
-        }
-        th {
-            background-color: #f2f2f2;
         }
     </style>
 </head>
 <body>
 
-    <h1>Absensi Otomatis dengan Gerakan Atas-Bawah dan Foto</h1>
-    <p>Goyangkan perangkat ke atas dan ke bawah untuk mengambil foto dan melakukan absensi otomatis.</p>
+    <h1>Absensi Otomatis dengan Verifikasi Wajah</h1>
     <video id="video" autoplay></video>
-    <canvas id="canvas" width="320" height="240" style="display:none;"></canvas>
-    <div id="status">Menunggu gerakan...</div>
+    <canvas id="canvas" width="320" height="240"></canvas>
+    <div id="status">Menunggu deteksi wajah...</div>
 
-    <table>
-        <thead>
-            <tr>
-                <th>Nama</th>
-                <th>Foto</th>
-                <th>Waktu</th>
-            </tr>
-        </thead>
-        <tbody id="attendanceList"></tbody>
-    </table>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/blazeface"></script>
 
     <script>
-        let absensiDone = false;
-        const video = document.getElementById('video');
-        const canvas = document.getElementById('canvas');
-        const context = canvas.getContext('2d');
+        let video = document.getElementById('video');
+        let canvas = document.getElementById('canvas');
+        let context = canvas.getContext('2d');
+        let model;
 
-        // Mengakses kamera
-        navigator.mediaDevices.getUserMedia({ video: true })
-            .then(function(stream) {
-                video.srcObject = stream;
-            })
-            .catch(function(err) {
-                console.error("Error accessing the camera: " + err);
+        async function setupCamera() {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            video.srcObject = stream;
+            return new Promise((resolve) => {
+                video.onloadedmetadata = () => resolve(video);
             });
-
-        // Mendeteksi gerakan dengan akselerometer
-        if ('Accelerometer' in window) {
-            const accelerometer = new Accelerometer({ frequency: 60 });
-            let lastAccelerationZ = 0;
-            let movementCount = 0;
-
-            accelerometer.addEventListener('reading', () => {
-                const currentZ = accelerometer.z;
-
-                // Deteksi pergerakan atas-bawah
-                if (!absensiDone) {
-                    if (currentZ > 10 && lastAccelerationZ < -10) {
-                        movementCount++;
-                    }
-
-                    if (movementCount >= 3) { // Jika terdeteksi 3 kali goyangan
-                        document.getElementById('status').innerText = "Mengambil Foto...";
-                        takePicture();
-                        absensiDone = true;
-                    }
-
-                    lastAccelerationZ = currentZ;
-                }
-            });
-
-            accelerometer.start();
-        } else {
-            document.getElementById('status').innerText = "Perangkat ini tidak mendukung sensor akselerometer.";
         }
 
-        // Fungsi untuk mengambil foto
+        async function loadModel() {
+            model = await blazeface.load(); // Load BlazeFace model
+        }
+
+        async function detectFace() {
+            const predictions = await model.estimateFaces(video, false);
+
+            if (predictions.length > 0) {
+                document.getElementById('status').innerText = 'Wajah terdeteksi!';
+                context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                // Mendapatkan posisi wajah (top-left corner)
+                const topLeft = predictions[0].topLeft;
+                const bottomRight = predictions[0].bottomRight;
+
+                const faceHeight = bottomRight[1] - topLeft[1];
+
+                // Deteksi gerakan atas-bawah berdasarkan ketinggian wajah
+                if (faceHeight > 140) { // Jika wajah terlalu dekat ke kamera (atas)
+                    document.getElementById('status').innerText = 'Gerakkan wajah ke bawah...';
+                } else if (faceHeight < 100) { // Jika wajah terlalu jauh (bawah)
+                    document.getElementById('status').innerText = 'Gerakkan wajah ke atas...';
+                } else {
+                    document.getElementById('status').innerText = 'Gerakan sesuai, absensi berhasil!';
+                    takePicture();
+                }
+            } else {
+                document.getElementById('status').innerText = 'Wajah tidak terdeteksi!';
+            }
+
+            requestAnimationFrame(detectFace); // Loop detection
+        }
+
         function takePicture() {
+            // Ambil gambar dari video dan simpan dalam bentuk foto (absen otomatis)
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
             const imgData = canvas.toDataURL('image/png');
-            const now = new Date().toLocaleString();
-
-            // Tambahkan data ke tabel absensi
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>Nama Pengguna</td>
-                <td><img src="${imgData}" alt="Foto Absen"></td>
-                <td>${now}</td>
-            `;
-            document.getElementById('attendanceList').appendChild(row);
-
-            document.getElementById('status').innerText = "Absensi Berhasil!";
+            console.log("Foto diambil:", imgData);
         }
+
+        async function main() {
+            await setupCamera();
+            await loadModel();
+            detectFace(); // Mulai deteksi wajah dan gerakan
+        }
+
+        main();
     </script>
 
 </body>
