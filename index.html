@@ -3,237 +3,110 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Absensi Online dengan Kamera dan Live Lokasi</title>
+    <title>Live Location dengan Peta</title>
     <style>
       body {
-        font-family: "Roboto", sans-serif;
-        background-color: #f4f7fc;
+        font-family: Arial, sans-serif;
+        background-color: #f4f4f4;
         margin: 0;
-        padding: 0;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        min-height: 100vh;
-      }
-
-      h1,
-      h2 {
-        color: #333;
-      }
-
-      .container {
-        background-color: #ffffff;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-        border-radius: 10px;
         padding: 20px;
-        max-width: 400px;
-        width: 100%;
+      }
+      header {
         text-align: center;
         margin-bottom: 20px;
       }
-
-      video,
-      canvas {
-        display: block;
-        margin: 10px auto;
+      #map {
+        height: 400px;
         width: 100%;
-        max-width: 320px;
-        height: auto;
-        border: 2px solid #ddd;
-        border-radius: 10px;
-      }
-
-      #captureBtn {
-        background-color: #4caf50;
-        color: white;
-        padding: 10px 20px;
-        border: none;
-        border-radius: 5px;
-        cursor: pointer;
-        font-size: 16px;
-        transition: background-color 0.3s ease;
-      }
-
-      #captureBtn:hover {
-        background-color: #45a049;
-      }
-
-      #status {
-        margin-top: 10px;
-        font-size: 14px;
-        color: #555;
-      }
-
-      #absensiData {
         margin-top: 20px;
       }
-
-      .absensi-item {
-        background-color: #f9f9f9;
-        border-radius: 10px;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+      #locationInfo {
+        background: white;
         padding: 10px;
-        margin-bottom: 20px;
-        text-align: left;
-        font-size: 14px;
+        border-radius: 8px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        margin-top: 20px;
+        font-size: 16px;
       }
-
-      .absensi-item img {
-        width: 100%;
-        border-radius: 5px;
-        margin-bottom: 10px;
-      }
-
-      .absensi-item a {
-        color: #2196f3;
-        text-decoration: none;
-      }
-
-      .absensi-item a:hover {
-        text-decoration: underline;
-      }
-
-      @media (max-width: 768px) {
-        .container {
-          padding: 15px;
-        }
-
-        h1 {
-          font-size: 24px;
-        }
-
-        h2 {
-          font-size: 18px;
-        }
-
-        #captureBtn {
-          font-size: 14px;
-          padding: 8px 16px;
+      @media (max-width: 600px) {
+        #map {
+          height: 300px;
         }
       }
     </style>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
   </head>
   <body>
-    <div class="container">
-      <h1>Absensi Online</h1>
-      <video id="video" autoplay></video>
-      <canvas id="canvas" width="320" height="240"></canvas>
-      <button id="captureBtn">Ambil Foto dan Absensi</button>
-      <div id="status"></div>
-    </div>
+    <header>
+      <h1>Live Location dengan Peta</h1>
+      <p>Melacak posisi Anda secara langsung dan menampilkannya di peta.</p>
+    </header>
 
-    <div class="container">
-      <h2>Data Absensi</h2>
-      <div id="absensiData"></div>
-    </div>
+    <div id="locationInfo">Mendapatkan lokasi Anda...</div>
+    <div id="map"></div>
 
-    <div class="container">
-      <h2>Live Location</h2>
-      <div
-        id="map"
-        style="width: 100%; height: 300px; border-radius: 10px"
-      ></div>
-    </div>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script>
-      let video = document.getElementById("video");
-      let canvas = document.getElementById("canvas");
-      let context = canvas.getContext("2d");
-      let absensiData = document.getElementById("absensiData");
-      let statusText = document.getElementById("status");
-      let captureBtn = document.getElementById("captureBtn");
-      let map, marker;
+      // Inisialisasi peta dengan Leaflet.js
+      var map = L.map("map").setView([0, 0], 13); // Awal peta dengan posisi [0, 0]
 
-      // Akses Kamera
-      async function setupCamera() {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-        });
-        video.srcObject = stream;
+      // Menambahkan layer peta (gunakan OpenStreetMap)
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 18,
+      }).addTo(map);
+
+      // Menambahkan marker awal
+      var marker = L.marker([0, 0]).addTo(map);
+
+      // Fungsi untuk memperbarui lokasi secara langsung
+      function updateLocation(position) {
+        var lat = position.coords.latitude;
+        var lon = position.coords.longitude;
+        var accuracy = position.coords.accuracy;
+
+        // Menampilkan posisi dalam bentuk teks
+        document.getElementById(
+          "locationInfo"
+        ).innerHTML = `Posisi Anda: <br> Latitude: ${lat.toFixed(
+          6
+        )}, Longitude: ${lon.toFixed(6)} <br> Akurasi: ${accuracy} meter`;
+
+        // Memperbarui posisi marker di peta
+        marker.setLatLng([lat, lon]).bindPopup("Anda di sini!").openPopup();
+
+        // Memperbesar peta ke posisi saat ini
+        map.setView([lat, lon], 13);
       }
 
-      // Ambil Foto dan Lokasi
-      async function ambilFotoDanAbsensi() {
-        // Ambil Foto dari Kamera
-        context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const imgData = canvas.toDataURL("image/png"); // Gambar dalam bentuk base64
-
-        // Ambil Lokasi Pengguna
-        if (navigator.geolocation) {
-          navigator.geolocation.getCurrentPosition((position) => {
-            const latitude = position.coords.latitude;
-            const longitude = position.coords.longitude;
-
-            // Buat marker di Google Maps
-            if (!map) {
-              map = new google.maps.Map(document.getElementById("map"), {
-                center: { lat: latitude, lng: longitude },
-                zoom: 15,
-              });
-
-              marker = new google.maps.Marker({
-                position: { lat: latitude, lng: longitude },
-                map: map,
-              });
-            } else {
-              marker.setPosition({ lat: latitude, lng: longitude });
-              map.setCenter({ lat: latitude, lng: longitude });
-            }
-
-            const tempatAbsensi = prompt("Masukkan nama tempat absensi:");
-            simpanKeLocalStorage(imgData, latitude, longitude, tempatAbsensi);
-            statusText.innerText = "Absensi berhasil disimpan!";
-            statusText.style.color = "green";
-            tampilkanDataAbsensi();
-          });
-        } else {
-          statusText.innerText = "Geolokasi tidak didukung di browser ini.";
-          statusText.style.color = "red";
+      // Menangani kesalahan geolokasi
+      function showError(error) {
+        switch (error.code) {
+          case error.PERMISSION_DENIED:
+            alert("Pengguna menolak permintaan geolokasi.");
+            break;
+          case error.POSITION_UNAVAILABLE:
+            alert("Informasi lokasi tidak tersedia.");
+            break;
+          case error.TIMEOUT:
+            alert("Permintaan untuk mendapatkan lokasi pengguna time out.");
+            break;
+          case error.UNKNOWN_ERROR:
+            alert("Terjadi kesalahan yang tidak diketahui.");
+            break;
         }
       }
 
-      // Simpan Data ke LocalStorage
-      function simpanKeLocalStorage(imgData, latitude, longitude, tempat) {
-        const absensi = {
-          image: imgData,
-          latitude: latitude,
-          longitude: longitude,
-          tempat: tempat,
-          waktu: new Date().toLocaleString(),
-        };
-
-        let dataAbsensi = JSON.parse(localStorage.getItem("absensi")) || [];
-        dataAbsensi.push(absensi);
-        localStorage.setItem("absensi", JSON.stringify(dataAbsensi));
-      }
-
-      // Tampilkan Data Absensi
-      function tampilkanDataAbsensi() {
-        absensiData.innerHTML = "";
-        let dataAbsensi = JSON.parse(localStorage.getItem("absensi")) || [];
-        dataAbsensi.forEach((item, index) => {
-          let div = document.createElement("div");
-          div.classList.add("absensi-item");
-          div.innerHTML = `
-            <p><strong>Tempat:</strong> ${item.tempat}</p>
-            <p><strong>Waktu:</strong> ${item.waktu}</p>
-            <p><strong>Latitude:</strong> ${item.latitude}</p>
-            <p><strong>Longitude:</strong> ${item.longitude}</p>
-            <img src="${item.image}" alt="Foto Absensi">
-            <a href="https://www.google.com/maps?q=${item.latitude},${item.longitude}" target="_blank">Lihat di Google Maps</a>
-          `;
-          absensiData.appendChild(div);
+      // Mendapatkan live location secara terus-menerus
+      if (navigator.geolocation) {
+        navigator.geolocation.watchPosition(updateLocation, showError, {
+          enableHighAccuracy: true,
+          timeout: 5000,
+          maximumAge: 0,
         });
+      } else {
+        alert("Geolocation tidak didukung oleh browser ini.");
       }
-
-      // Event Listener untuk Tombol Capture
-      captureBtn.addEventListener("click", ambilFotoDanAbsensi);
-
-      // Setup Kamera saat halaman dimuat
-      setupCamera();
-
-      // Tampilkan data absensi saat halaman dimuat
-      tampilkanDataAbsensi();
     </script>
   </body>
 </html>
