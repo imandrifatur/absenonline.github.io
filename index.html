@@ -1,141 +1,230 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Absen Online dengan Verifikasi Wajah & Lokasi</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f4f4f4;
-      margin: 0;
-      padding: 20px;
-      text-align: center;
-    }
-    #camera, #snapshot {
-      margin-top: 20px;
-      border: 2px solid #ddd;
-      border-radius: 10px;
-      width: 100%;
-      max-width: 400px;
-    }
-    #locationInfo {
-      margin-top: 20px;
-      padding: 10px;
-      background: white;
-      border-radius: 8px;
-      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-    }
-    #status {
-      color: green;
-      font-weight: bold;
-    }
-    button {
-      padding: 10px 20px;
-      margin-top: 20px;
-      background-color: #4CAF50;
-      color: white;
-      border: none;
-      border-radius: 5px;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #45a049;
-    }
-    #map {
-      height: 400px;
-      width: 100%;
-      margin-top: 20px;
-    }
-    @media (max-width: 600px) {
-      #map {
-        height: 300px;
-      }
-    }
-  </style>
-  <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplikasi Absen dengan Foto dan Lokasi</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 20px;
+        }
+        header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        form {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        input[type="text"],
+        input[type="submit"],
+        button {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            width: 100%;
+        }
+        input[type="submit"],
+        button {
+            background-color: #28a745;
+            color: white;
+            cursor: pointer;
+        }
+        input[type="submit"]:hover,
+        button:hover {
+            background-color: #218838;
+        }
+        video {
+            width: 100%;
+            max-width: 320px;
+            border-radius: 5px;
+            margin: auto;
+            display: block;
+            margin-top: 10px;
+            border: 1px solid #ddd;
+        }
+        canvas {
+            display: none; /* Sembunyikan canvas */
+        }
+        img {
+            max-width: 100%;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        @media (max-width: 600px) {
+            form {
+                padding: 15px;
+            }
+            input[type="submit"] {
+                padding: 12px;
+            }
+        }
+    </style>
 </head>
 <body>
+    <header>
+        <h1>Aplikasi Absen dengan Foto dan Lokasi</h1>
+    </header>
+    <form id="attendanceForm">
+        <input type="text" id="name" placeholder="Nama" required>
+        <video id="video" autoplay></video>
+        <button type="button" id="snap">Ambil Foto</button>
+        <canvas id="canvas" width="320" height="240"></canvas>
+        <input type="text" id="location" placeholder="Lokasi" readonly required>
+        <input type="submit" value="Absen">
+    </form>
+    <button id="startLiveLocation">Mulai Bagikan Lokasi</button>
+    <button id="stopLiveLocation" style="display:none;">Berhenti Bagikan Lokasi</button>
+    
+    <table>
+        <thead>
+            <tr>
+                <th>Nama</th>
+                <th>Foto</th>
+                <th>Lokasi</th>
+            </tr>
+        </thead>
+        <tbody id="attendanceList"></tbody>
+    </table>
 
-  <h1>Absen Online dengan Verifikasi Wajah & Lokasi</h1>
-  <p>Ambil gambar untuk verifikasi wajah dan deteksi lokasi secara real-time.</p>
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const context = canvas.getContext('2d');
+        let liveLocationInterval;
 
-  <!-- Video kamera untuk mengambil gambar -->
-  <video id="camera" autoplay></video>
-  <canvas id="snapshot" style="display:none;"></canvas>
+        navigator.mediaDevices.getUserMedia({ video: true })
+            .then(function(stream) {
+                video.srcObject = stream;
+            })
+            .catch(function(err) {
+                console.error("Error accessing the camera: " + err);
+            });
 
-  <!-- Tombol untuk mengambil gambar dan absensi -->
-  <button onclick="takeSnapshot()">Ambil Gambar & Absen</button>
+        document.getElementById('snap').addEventListener('click', function() {
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        });
 
-  <!-- Menampilkan informasi lokasi -->
-  <div id="locationInfo">Menunggu lokasi...</div>
+        document.getElementById('attendanceForm').addEventListener('submit', function(event) {
+            event.preventDefault();
 
-  <!-- Peta untuk menampilkan posisi pengguna -->
-  <div id="map"></div>
+            const name = document.getElementById('name').value;
+            const imgData = canvas.toDataURL('image/png');
+            const location = document.getElementById('location').value;
 
-  <div id="status"></div>
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${name}</td>
+                <td><img src="${imgData}" alt="Foto Absen"></td>
+                <td>${location}</td>
+            `;
+            document.getElementById('attendanceList').appendChild(row);
 
-  <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-  <script>
-    // Membuka kamera perangkat
-    const video = document.getElementById('camera');
-    const canvas = document.getElementById('snapshot');
-    const context = canvas.getContext('2d');
+            document.getElementById('attendanceForm').reset();
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            getLocation();
+        });
 
-    navigator.mediaDevices.getUserMedia({ video: true })
-      .then((stream) => {
-        video.srcObject = stream;
-      })
-      .catch((error) => {
-        console.error('Error accessing camera:', error);
-      });
+        function getLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(showPosition, showError);
+            } else {
+                alert("Geolocation tidak didukung oleh browser ini.");
+            }
+        }
 
-    // Fungsi untuk mengambil snapshot dari video
-    function takeSnapshot() {
-      // Mengambil snapshot dari video
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
+        function showPosition(position) {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+            document.getElementById('location').value = `Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}`;
+        }
 
-      // Placeholder untuk face recognition (disini hanya snapshot)
-      alert("Gambar diambil untuk verifikasi wajah.");
+        function showError(error) {
+            let errorMessage = '';
+            switch(error.code) {
+                case error.PERMISSION_DENIED:
+                    errorMessage = "Pengguna menolak permintaan geolokasi.";
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    errorMessage = "Lokasi tidak tersedia.";
+                    break;
+                case error.TIMEOUT:
+                    errorMessage = "Permintaan geolokasi waktu habis.";
+                    break;
+                case error.UNKNOWN_ERROR:
+                    errorMessage = "Kesalahan tidak dikenal.";
+                    break;
+            }
+            alert(errorMessage);
+            document.getElementById('location').value = "Lokasi tidak ditemukan";
+        }
 
-      // Melakukan absensi
-      if (currentPosition) {
-        document.getElementById('status').textContent = 'Absensi berhasil!';
-        document.getElementById('status').style.color = 'green';
-      } else {
-        document.getElementById('status').textContent = 'Gagal mengambil lokasi!';
-        document.getElementById('status').style.color = 'red';
-      }
-    }
+        // Fungsi untuk mulai live location
+        function startLiveLocation() {
+            if (navigator.geolocation) {
+                liveLocationInterval = setInterval(() => {
+                    navigator.geolocation.getCurrentPosition(updateLiveLocation, showError);
+                }, 5000); // Update setiap 5 detik
+            } else {
+                alert("Geolocation tidak didukung oleh browser ini.");
+            }
+        }
 
-    // Geolocation untuk mendapatkan lokasi pengguna
-    let currentPosition;
-    if (navigator.geolocation) {
-      navigator.geolocation.watchPosition(function(position) {
-        currentPosition = position;
-        const lat = position.coords.latitude;
-        const lon = position.coords.longitude;
-        
-        // Update lokasi di informasi lokasi
-        document.getElementById('locationInfo').innerHTML = `Latitude: ${lat}, Longitude: ${lon}`;
+        function updateLiveLocation(position) {
+            const lat = position.coords.latitude;
+            const lon = position.coords.longitude;
+            document.getElementById('location').value = `Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}`;
+            console.log(`Live Location: Lat: ${lat}, Lon: ${lon}`); // Anda bisa mengirim data ini ke server di sini
+        }
 
-        // Memperbarui peta dengan lokasi pengguna
-        var map = L.map('map').setView([lat, lon], 13);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-          maxZoom: 18,
-        }).addTo(map);
-        L.marker([lat, lon]).addTo(map)
-          .bindPopup('Lokasi Anda Saat Ini')
-          .openPopup();
-      }, function(error) {
-        document.getElementById('locationInfo').textContent = 'Gagal mendapatkan lokasi!';
-        console.error('Error getting location:', error);
-      });
-    } else {
-      document.getElementById('locationInfo').textContent = 'Geolocation tidak didukung oleh browser ini.';
-    }
-  </script>
+        // Fungsi untuk berhenti live location
+        function stopLiveLocation() {
+            clearInterval(liveLocationInterval);
+            alert("Berhenti membagikan lokasi.");
+        }
+
+        // Event listener untuk tombol live location
+        document.getElementById('startLiveLocation').addEventListener('click', function() {
+            startLiveLocation();
+            this.style.display = "none";
+            document.getElementById('stopLiveLocation').style.display = "inline";
+        });
+
+        document.getElementById('stopLiveLocation').addEventListener('click', function() {
+            stopLiveLocation();
+            this.style.display = "none";
+            document.getElementById('startLiveLocation').style.display = "inline";
+        });
+
+        window.onload = function() {
+            getLocation();
+        };
+    </script>
 </body>
 </html>
