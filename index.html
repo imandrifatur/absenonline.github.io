@@ -161,24 +161,27 @@
         function showPosition(position) {
             const lat = position.coords.latitude;
             const lon = position.coords.longitude;
-            document.getElementById('location').value = `Lat: ${lat}, Lon: ${lon}`;
+            document.getElementById('location').value = `Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}`;
         }
 
         function showError(error) {
+            let errorMessage = '';
             switch(error.code) {
                 case error.PERMISSION_DENIED:
-                    alert("Pengguna menolak permintaan geolokasi.");
+                    errorMessage = "Pengguna menolak permintaan geolokasi.";
                     break;
                 case error.POSITION_UNAVAILABLE:
-                    alert("Lokasi tidak tersedia.");
+                    errorMessage = "Lokasi tidak tersedia.";
                     break;
                 case error.TIMEOUT:
-                    alert("Permintaan geolokasi waktu habis.");
+                    errorMessage = "Permintaan geolokasi waktu habis.";
                     break;
                 case error.UNKNOWN_ERROR:
-                    alert("Kesalahan tidak dikenal.");
+                    errorMessage = "Kesalahan tidak dikenal.";
                     break;
             }
+            alert(errorMessage);
+            document.getElementById('location').value = "Lokasi tidak ditemukan";
         }
 
         // Memanggil fungsi getLocation saat halaman dimuat
