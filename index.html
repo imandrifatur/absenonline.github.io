@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Aplikasi Absen dengan Foto dan Lokasi</title>
+    <title>Live Location dengan Peta</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -15,156 +15,85 @@
             text-align: center;
             margin-bottom: 20px;
         }
-        form {
-            background: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
-            display: flex;
-            flex-direction: column;
-            gap: 15px;
+        #map {
+            width: 100%;
+            height: 400px;
+            margin: 20px 0;
+            border: 1px solid #ddd;
         }
-        input[type="text"],
-        input[type="submit"],
         button {
             padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            font-size: 16px;
-            width: 100%;
-        }
-        input[type="submit"],
-        button {
+            border: none;
             background-color: #28a745;
             color: white;
             cursor: pointer;
+            font-size: 16px;
         }
-        input[type="submit"]:hover,
         button:hover {
             background-color: #218838;
         }
-        video {
-            width: 100%;
-            max-width: 320px;
-            border-radius: 5px;
-            margin: auto;
-            display: block;
-            margin-top: 10px;
-            border: 1px solid #ddd;
-        }
-        canvas {
-            display: none; /* Sembunyikan canvas */
-        }
-        img {
-            max-width: 100%;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-            margin-top: 10px;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-        }
-        table, th, td {
-            border: 1px solid #ddd;
-        }
-        th, td {
-            padding: 10px;
-            text-align: left;
-        }
-        th {
-            background-color: #f2f2f2;
-        }
-        @media (max-width: 600px) {
-            form {
-                padding: 15px;
-            }
-            input[type="submit"] {
-                padding: 12px;
-            }
-        }
     </style>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.3/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.3/dist/leaflet.js"></script>
 </head>
 <body>
     <header>
-        <h1>Aplikasi Absen dengan Foto dan Lokasi</h1>
+        <h1>Bagikan Lokasi Secara Live di Peta</h1>
     </header>
-    <form id="attendanceForm">
-        <input type="text" id="name" placeholder="Nama" required>
-        <video id="video" autoplay></video>
-        <button type="button" id="snap">Ambil Foto</button>
-        <canvas id="canvas" width="320" height="240"></canvas>
-        <input type="text" id="location" placeholder="Lokasi" readonly required>
-        <input type="submit" value="Absen">
-    </form>
+    
     <button id="startLiveLocation">Mulai Bagikan Lokasi</button>
     <button id="stopLiveLocation" style="display:none;">Berhenti Bagikan Lokasi</button>
-    
-    <table>
-        <thead>
-            <tr>
-                <th>Nama</th>
-                <th>Foto</th>
-                <th>Lokasi</th>
-            </tr>
-        </thead>
-        <tbody id="attendanceList"></tbody>
-    </table>
+
+    <div id="map"></div>
 
     <script>
-        const video = document.getElementById('video');
-        const canvas = document.getElementById('canvas');
-        const context = canvas.getContext('2d');
         let liveLocationInterval;
+        let map, marker;
 
-        navigator.mediaDevices.getUserMedia({ video: true })
-            .then(function(stream) {
-                video.srcObject = stream;
-            })
-            .catch(function(err) {
-                console.error("Error accessing the camera: " + err);
-            });
+        // Inisialisasi peta
+        function initMap(lat, lon) {
+            map = L.map('map').setView([lat, lon], 15); // Zoom level 15
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+            }).addTo(map);
 
-        document.getElementById('snap').addEventListener('click', function() {
-            context.drawImage(video, 0, 0, canvas.width, canvas.height);
-        });
+            // Tambahkan marker untuk lokasi pengguna
+            marker = L.marker([lat, lon]).addTo(map)
+                .bindPopup('Lokasi Anda').openPopup();
+        }
 
-        document.getElementById('attendanceForm').addEventListener('submit', function(event) {
-            event.preventDefault();
+        function updateMap(lat, lon) {
+            marker.setLatLng([lat, lon]); // Update posisi marker
+            map.setView([lat, lon], 15); // Pusatkan peta ke lokasi baru
+        }
 
-            const name = document.getElementById('name').value;
-            const imgData = canvas.toDataURL('image/png');
-            const location = document.getElementById('location').value;
-
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${name}</td>
-                <td><img src="${imgData}" alt="Foto Absen"></td>
-                <td>${location}</td>
-            `;
-            document.getElementById('attendanceList').appendChild(row);
-
-            document.getElementById('attendanceForm').reset();
-            context.clearRect(0, 0, canvas.width, canvas.height);
-            getLocation();
-        });
-
-        function getLocation() {
+        function startLiveLocation() {
             if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(showPosition, showError);
+                liveLocationInterval = setInterval(() => {
+                    navigator.geolocation.getCurrentPosition(position => {
+                        const lat = position.coords.latitude;
+                        const lon = position.coords.longitude;
+
+                        if (!map) {
+                            initMap(lat, lon); // Inisialisasi peta pertama kali
+                        } else {
+                            updateMap(lat, lon); // Update lokasi secara real-time
+                        }
+
+                        console.log(`Live Location: Lat: ${lat}, Lon: ${lon}`);
+                    }, showError);
+                }, 5000); // Update setiap 5 detik
             } else {
                 alert("Geolocation tidak didukung oleh browser ini.");
             }
         }
 
-        function showPosition(position) {
-            const lat = position.coords.latitude;
-            const lon = position.coords.longitude;
-            document.getElementById('location').value = `Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}`;
+        function stopLiveLocation() {
+            clearInterval(liveLocationInterval);
+            alert("Berhenti membagikan lokasi.");
         }
 
+        // Tampilkan pesan error jika ada masalah dengan geolocation
         function showError(error) {
             let errorMessage = '';
             switch(error.code) {
@@ -182,34 +111,8 @@
                     break;
             }
             alert(errorMessage);
-            document.getElementById('location').value = "Lokasi tidak ditemukan";
         }
 
-        // Fungsi untuk mulai live location
-        function startLiveLocation() {
-            if (navigator.geolocation) {
-                liveLocationInterval = setInterval(() => {
-                    navigator.geolocation.getCurrentPosition(updateLiveLocation, showError);
-                }, 5000); // Update setiap 5 detik
-            } else {
-                alert("Geolocation tidak didukung oleh browser ini.");
-            }
-        }
-
-        function updateLiveLocation(position) {
-            const lat = position.coords.latitude;
-            const lon = position.coords.longitude;
-            document.getElementById('location').value = `Lat: ${lat.toFixed(6)}, Lon: ${lon.toFixed(6)}`;
-            console.log(`Live Location: Lat: ${lat}, Lon: ${lon}`); // Anda bisa mengirim data ini ke server di sini
-        }
-
-        // Fungsi untuk berhenti live location
-        function stopLiveLocation() {
-            clearInterval(liveLocationInterval);
-            alert("Berhenti membagikan lokasi.");
-        }
-
-        // Event listener untuk tombol live location
         document.getElementById('startLiveLocation').addEventListener('click', function() {
             startLiveLocation();
             this.style.display = "none";
@@ -221,10 +124,6 @@
             this.style.display = "none";
             document.getElementById('startLiveLocation').style.display = "inline";
         });
-
-        window.onload = function() {
-            getLocation();
-        };
     </script>
 </body>
 </html>
