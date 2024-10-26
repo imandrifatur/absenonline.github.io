@@ -6,38 +6,128 @@
     <title>Absensi Online dengan Kamera dan Lokasi</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            margin: 20px;
+            font-family: 'Roboto', sans-serif;
+            background-color: #f4f7fc;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
         }
+
+        h1, h2 {
+            color: #333;
+        }
+
+        .container {
+            background-color: #ffffff;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
         video, canvas {
             display: block;
             margin: 10px auto;
-            width: 320px;
-            height: 240px;
-            border: 1px solid #ddd;
-            border-radius: 5px;
+            width: 100%;
+            max-width: 320px;
+            height: auto;
+            border: 2px solid #ddd;
+            border-radius: 10px;
         }
+
+        #captureBtn {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+
+        #captureBtn:hover {
+            background-color: #45a049;
+        }
+
+        #status {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #555;
+        }
+
         #absensiData {
             margin-top: 20px;
         }
+
         .absensi-item {
-            border: 1px solid #ddd;
+            background-color: #f9f9f9;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             padding: 10px;
-            margin: 10px 0;
+            margin-bottom: 20px;
+            text-align: left;
+            font-size: 14px;
         }
+
+        .absensi-item img {
+            width: 100%;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+
+        .absensi-item a {
+            color: #2196F3;
+            text-decoration: none;
+        }
+
+        .absensi-item a:hover {
+            text-decoration: underline;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            h2 {
+                font-size: 18px;
+            }
+
+            #captureBtn {
+                font-size: 14px;
+                padding: 8px 16px;
+            }
+        }
+
     </style>
 </head>
 <body>
 
-    <h1>Absensi Online</h1>
-    <video id="video" autoplay></video>
-    <canvas id="canvas" width="320" height="240"></canvas>
-    <button id="captureBtn">Ambil Foto dan Absensi</button>
-    <div id="status"></div>
+    <div class="container">
+        <h1>Absensi Online</h1>
+        <video id="video" autoplay></video>
+        <canvas id="canvas" width="320" height="240"></canvas>
+        <button id="captureBtn">Ambil Foto dan Absensi</button>
+        <div id="status"></div>
+    </div>
 
-    <h2>Data Absensi</h2>
-    <div id="absensiData"></div>
+    <div class="container">
+        <h2>Data Absensi</h2>
+        <div id="absensiData"></div>
+    </div>
 
     <script>
         let video = document.getElementById('video');
@@ -115,7 +205,233 @@
                     <p><strong>Waktu:</strong> ${item.waktu}</p>
                     <p><strong>Latitude:</strong> ${item.latitude}</p>
                     <p><strong>Longitude:</strong> ${item.longitude}</p>
-                    <img src="${item.image}" alt="Foto Absensi" width="320" height="240">
+                    <img src="${item.image}" alt="Foto Absensi">
+                    <a href="https://www.google.com/maps?q=${item.latitude},${item.longitude}" target="_blank">Lihat di Google Maps</a>
+                `;
+                absensiData.appendChild(div);
+            });
+        }
+
+        // Event Listener untuk Tombol Capture
+        captureBtn.addEventListener('click', ambilFotoDanAbsensi);
+
+        // Setup Kamera saat halaman dimuat
+        setupCamera();
+
+        // Tampilkan data absensi saat halaman dimuat
+        tampilkanDataAbsensi();
+    </script>
+
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Absensi Online dengan Kamera dan Lokasi</title>
+    <style>
+        body {
+            font-family: 'Roboto', sans-serif;
+            background-color: #f4f7fc;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        h1, h2 {
+            color: #333;
+        }
+
+        .container {
+            background-color: #ffffff;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            padding: 20px;
+            max-width: 400px;
+            width: 100%;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        video, canvas {
+            display: block;
+            margin: 10px auto;
+            width: 100%;
+            max-width: 320px;
+            height: auto;
+            border: 2px solid #ddd;
+            border-radius: 10px;
+        }
+
+        #captureBtn {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+
+        #captureBtn:hover {
+            background-color: #45a049;
+        }
+
+        #status {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #555;
+        }
+
+        #absensiData {
+            margin-top: 20px;
+        }
+
+        .absensi-item {
+            background-color: #f9f9f9;
+            border-radius: 10px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            padding: 10px;
+            margin-bottom: 20px;
+            text-align: left;
+            font-size: 14px;
+        }
+
+        .absensi-item img {
+            width: 100%;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+
+        .absensi-item a {
+            color: #2196F3;
+            text-decoration: none;
+        }
+
+        .absensi-item a:hover {
+            text-decoration: underline;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 15px;
+            }
+
+            h1 {
+                font-size: 24px;
+            }
+
+            h2 {
+                font-size: 18px;
+            }
+
+            #captureBtn {
+                font-size: 14px;
+                padding: 8px 16px;
+            }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>Absensi Online</h1>
+        <video id="video" autoplay></video>
+        <canvas id="canvas" width="320" height="240"></canvas>
+        <button id="captureBtn">Ambil Foto dan Absensi</button>
+        <div id="status"></div>
+    </div>
+
+    <div class="container">
+        <h2>Data Absensi</h2>
+        <div id="absensiData"></div>
+    </div>
+
+    <script>
+        let video = document.getElementById('video');
+        let canvas = document.getElementById('canvas');
+        let context = canvas.getContext('2d');
+        let absensiData = document.getElementById('absensiData');
+        let statusText = document.getElementById('status');
+        let captureBtn = document.getElementById('captureBtn');
+
+        // Akses Kamera
+        async function setupCamera() {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+            video.srcObject = stream;
+        }
+
+        // Ambil Foto dan Lokasi
+        async function ambilFotoDanAbsensi() {
+            // Ambil Foto dari Kamera
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const imgData = canvas.toDataURL('image/png'); // Gambar dalam bentuk base64
+
+            // Ambil Lokasi Pengguna
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition((position) => {
+                    const latitude = position.coords.latitude;
+                    const longitude = position.coords.longitude;
+
+                    // Dapatkan Nama Lokasi dari Latitude dan Longitude (Menggunakan API Reverse Geocoding)
+                    const tempatAbsensi = prompt("Masukkan nama tempat absensi:");
+
+                    // Simpan Foto, Lokasi, dan Nama Tempat di LocalStorage
+                    simpanKeLocalStorage(imgData, latitude, longitude, tempatAbsensi);
+
+                    // Tampilkan Status
+                    statusText.innerText = "Absensi berhasil disimpan!";
+                    statusText.style.color = "green";
+
+                    // Tampilkan Data Absensi yang Tersimpan
+                    tampilkanDataAbsensi();
+                });
+            } else {
+                statusText.innerText = "Geolokasi tidak didukung di browser ini.";
+                statusText.style.color = "red";
+            }
+        }
+
+        // Simpan Data ke LocalStorage
+        function simpanKeLocalStorage(imgData, latitude, longitude, tempat) {
+            const absensi = {
+                image: imgData,
+                latitude: latitude,
+                longitude: longitude,
+                tempat: tempat,
+                waktu: new Date().toLocaleString()
+            };
+
+            // Ambil data absensi yang sudah ada
+            let dataAbsensi = JSON.parse(localStorage.getItem('absensi')) || [];
+            dataAbsensi.push(absensi);
+
+            // Simpan kembali ke LocalStorage
+            localStorage.setItem('absensi', JSON.stringify(dataAbsensi));
+        }
+
+        // Tampilkan Data Absensi
+        function tampilkanDataAbsensi() {
+            absensiData.innerHTML = ''; // Bersihkan data sebelumnya
+            let dataAbsensi = JSON.parse(localStorage.getItem('absensi')) || [];
+
+            dataAbsensi.forEach((item, index) => {
+                let div = document.createElement('div');
+                div.classList.add('absensi-item');
+                div.innerHTML = `
+                    <p><strong>Tempat:</strong> ${item.tempat}</p>
+                    <p><strong>Waktu:</strong> ${item.waktu}</p>
+                    <p><strong>Latitude:</strong> ${item.latitude}</p>
+                    <p><strong>Longitude:</strong> ${item.longitude}</p>
+                    <img src="${item.image}" alt="Foto Absensi">
                     <a href="https://www.google.com/maps?q=${item.latitude},${item.longitude}" target="_blank">Lihat di Google Maps</a>
                 `;
                 absensiData.appendChild(div);
