@@ -146,6 +146,7 @@
             // Mengosongkan form setelah pengisian
             document.getElementById('attendanceForm').reset();
             context.clearRect(0, 0, canvas.width, canvas.height);
+            getLocation(); // Memperbarui lokasi setiap kali absen
         });
 
         // Mendapatkan lokasi
