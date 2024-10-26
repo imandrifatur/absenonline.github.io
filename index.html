@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Absen Online dengan Verifikasi Wajah & Lokasi</title>
+  <title>Absen Online dengan Verifikasi Wajah & Lokasi Detail</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -57,8 +57,8 @@
 </head>
 <body>
 
-  <h1>Absen Online dengan Verifikasi Wajah & Lokasi</h1>
-  <p>Ambil gambar untuk verifikasi wajah dan deteksi lokasi secara real-time.</p>
+  <h1>Absen Online dengan Verifikasi Wajah & Lokasi Detail</h1>
+  <p>Ambil gambar untuk verifikasi wajah dan deteksi lokasi dengan nama tempat secara real-time.</p>
 
   <!-- Video kamera untuk mengambil gambar -->
   <video id="camera" autoplay></video>
@@ -81,7 +81,9 @@
     const video = document.getElementById('camera');
     const canvas = document.getElementById('snapshot');
     const context = canvas.getContext('2d');
-
+    let currentPosition = null;
+    let locationName = null;
+    
     navigator.mediaDevices.getUserMedia({ video: true })
       .then((stream) => {
         video.srcObject = stream;
@@ -97,12 +99,24 @@
       canvas.height = video.videoHeight;
       context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
+      // Menyimpan gambar ke LocalStorage
+      const imageData = canvas.toDataURL();
+      localStorage.setItem('absen_image', imageData);
+
       // Placeholder untuk face recognition (disini hanya snapshot)
       alert("Gambar diambil untuk verifikasi wajah.");
-
-      // Melakukan absensi
-      if (currentPosition) {
-        document.getElementById('status').textContent = 'Absensi berhasil!';
+      
+      // Menyimpan absensi ke LocalStorage jika lokasi sudah tersedia
+      if (currentPosition && locationName) {
+        const absenData = {
+          latitude: currentPosition.coords.latitude,
+          longitude: currentPosition.coords.longitude,
+          lokasi: locationName,
+          waktu: new Date().toLocaleString(),
+          image: imageData
+        };
+        localStorage.setItem('absen_data', JSON.stringify(absenData));
+        document.getElementById('status').textContent = 'Absensi berhasil disimpan!';
         document.getElementById('status').style.color = 'green';
       } else {
         document.getElementById('status').textContent = 'Gagal mengambil lokasi!';
@@ -111,7 +125,6 @@
     }
 
     // Geolocation untuk mendapatkan lokasi pengguna
-    let currentPosition;
     if (navigator.geolocation) {
       navigator.geolocation.watchPosition(function(position) {
         currentPosition = position;
@@ -119,8 +132,8 @@
         const lon = position.coords.longitude;
         
         // Update lokasi di informasi lokasi
-        document.getElementById('locationInfo').innerHTML = `Latitude: ${lat}, Longitude: ${lon}`;
-
+        getLocationName(lat, lon);
+        
         // Memperbarui peta dengan lokasi pengguna
         var map = L.map('map').setView([lat, lon], 13);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -135,6 +148,27 @@
       });
     } else {
       document.getElementById('locationInfo').textContent = 'Geolocation tidak didukung oleh browser ini.';
+    }
+
+    // Fungsi untuk mendapatkan nama lokasi dari koordinat
+    function getLocationName(lat, lon) {
+      const apiKey = 'YOUR_OPENCAGE_API_KEY'; // Masukkan API Key OpenCage
+      const url = `https://api.opencagedata.com/geocode/v1/json?q=${lat}+${lon}&key=${apiKey}&language=id&pretty=1`;
+      
+      fetch(url)
+        .then(response => response.json())
+        .then(data => {
+          if (data.results && data.results.length > 0) {
+            locationName = data.results[0].formatted;
+            document.getElementById('locationInfo').innerHTML = `Lokasi: ${locationName}`;
+          } else {
+            document.getElementById('locationInfo').innerHTML = 'Nama lokasi tidak ditemukan.';
+          }
+        })
+        .catch(error => {
+          console.error('Error fetching location name:', error);
+          document.getElementById('locationInfo').innerHTML = 'Gagal mendapatkan nama lokasi.';
+        });
     }
   </script>
 </body>
